@@ -58,7 +58,6 @@ def step_until_leave(state):
             if out_of_bounds(new_guard_loc):
                 break
             if _state[new_guard_loc] == OBSTACLE:  # turn right
-                _state[guard_loc] = GUARD
                 num_rotations = (num_rotations + 1) % 4
             else:  # move ahead to new location
                 _state[guard_loc] = BLANK
@@ -92,14 +91,13 @@ def step_until_leave_or_cycle_or_maxit(position, state, mask, maxit):
             new_guard_loc = _move(guard_loc, num_rotations)
             if out_of_bounds(new_guard_loc):
                 return False
+            if _mask[new_guard_loc] == VISITED + num_rotations:
+                return True  # cycle: early exit if we already visited position in same orientation
             if _state[new_guard_loc] == OBSTACLE:  # turn right
-                _state[guard_loc] = GUARD
                 num_rotations = (num_rotations + 1) % 4
             else:  # move ahead to new location
                 _state[guard_loc] = BLANK
                 _state[new_guard_loc] = GUARD
-                if _mask[new_guard_loc] == VISITED + num_rotations:
-                    return True  # cycle: early exit if we already visited position in same orientation
                 _mask[new_guard_loc] = VISITED + num_rotations
             it += 1
         return False
