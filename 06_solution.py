@@ -1,5 +1,4 @@
 import os
-from copy import deepcopy
 from functools import partial
 from io import StringIO
 from multiprocessing import Pool
@@ -13,13 +12,11 @@ from tqdm import tqdm
 BLANK = 0
 OBSTACLE = 1
 GUARD = 2
-VISITED = 3
 
 vocab = {
     ".": BLANK,
     "#": OBSTACLE,
     "^": GUARD,
-    "X": VISITED,
 }
 
 
@@ -29,114 +26,95 @@ def tokenize(array):
     ).reshape(array.shape)
 
 
-def _move(loc, num_rotations):
+def _move(pos, num_rotations):
     if num_rotations == 0:
-        return (lambda t: (t[0] - 1, t[1]))(loc)
+        return (pos[0] - 1, pos[1])
     elif num_rotations == 1:
-        return (lambda t: (t[0], t[1] + 1))(loc)
+        return (pos[0], pos[1] + 1)
     elif num_rotations == 2:
-        return (lambda t: (t[0] + 1, t[1]))(loc)
+        return (pos[0] + 1, pos[1])
     elif num_rotations == 3:
-        return (lambda t: (t[0], t[1] - 1))(loc)
+        return (pos[0], pos[1] - 1)
 
 
-def _out_of_bounds(xmax, ymax, loc):
-    return (loc[0] < 0) | (loc[0] >= xmax) | (loc[1] < 0) | (loc[1] >= ymax)
+def _out_of_bounds(xmax, ymax, pos):
+    return (pos[0] < 0) | (pos[0] >= xmax) | (pos[1] < 0) | (pos[1] >= ymax)
 
 
-def step_until_leave(state):
-    mask = np.zeros_like(state, dtype=np.uint8)
-    mask[np.where(state == GUARD)] = VISITED
+def step_until_leave_or_cycle(pos, obstacles, bounds, detect_and_return_cylicity=False):
+    out_of_bounds = partial(_out_of_bounds, *bounds)
 
-    out_of_bounds = partial(_out_of_bounds, *state.shape)
-
-    def _step_until_leave(_state, _mask):
-        num_rotations = 0
-        while True:
-            guard_loc = np.where(_state == GUARD)
-            new_guard_loc = _move(guard_loc, num_rotations)
-            if out_of_bounds(new_guard_loc):
-                break
-            if _state[new_guard_loc] == OBSTACLE:  # turn right
-                num_rotations = (num_rotations + 1) % 4
-            else:  # move ahead to new location
-                _state[guard_loc] = BLANK
-                _state[new_guard_loc] = GUARD
-                _mask[new_guard_loc] = VISITED + num_rotations
-        return _state, _mask
-
-    init_state, init_mask = deepcopy(state), deepcopy(mask)
-    _, mask = _step_until_leave(init_state, init_mask)
-
-    return mask
+    visited, num_rotations = {}, 0
+    while (
+        True
+    ):  # will run forever if `detect_and_return_cylicity=False` and configuration leads to cycles...
+        new_pos = _move(pos, num_rotations)
+        if out_of_bounds(new_pos):
+            break
+        if (
+            detect_and_return_cylicity
+            and new_pos in visited
+            and visited[new_pos] == num_rotations
+        ):
+            return True  # cycle: early exit if we already visited position in same orientation
+        if new_pos in obstacles:  # turn right
+            num_rotations = (num_rotations + 1) % 4
+        else:  # move ahead to new location
+            pos = new_pos
+            visited[pos] = num_rotations
+    return visited if not detect_and_return_cylicity else False
 
 
 def solve(state):
-    return np.count_nonzero(step_until_leave(state))
+    return len(
+        step_until_leave_or_cycle(
+            list(zip(*np.where(state == GUARD)))[0],
+            list(zip(*np.where(state == OBSTACLE))),
+            state.shape,
+        )
+    )
 
 
 # part 2
 
 
-def step_until_leave_or_cycle_or_maxit(position, state, mask, maxit):
-    init_state, init_mask = deepcopy(state), deepcopy(mask)
-    init_state[position[0], position[1]] = OBSTACLE
-
-    out_of_bounds = partial(_out_of_bounds, *state.shape)
-
-    def _step_until_leave_or_cycle_or_maxit(_state, _mask, _maxit):
-        num_rotations, it = 0, 0
-        while it < _maxit:
-            guard_loc = np.where(_state == GUARD)
-            new_guard_loc = _move(guard_loc, num_rotations)
-            if out_of_bounds(new_guard_loc):
-                return False
-            if _mask[new_guard_loc] == VISITED + num_rotations:
-                return True  # cycle: early exit if we already visited position in same orientation
-            if _state[new_guard_loc] == OBSTACLE:  # turn right
-                num_rotations = (num_rotations + 1) % 4
-            else:  # move ahead to new location
-                _state[guard_loc] = BLANK
-                _state[new_guard_loc] = GUARD
-                _mask[new_guard_loc] = VISITED + num_rotations
-            it += 1
-        return False
-
-    return _step_until_leave_or_cycle_or_maxit(init_state, init_mask, maxit)
+def add_extra_obstacle(pos, obstacles, bounds, extra_obstacle):
+    return step_until_leave_or_cycle(
+        pos,
+        obstacles + [extra_obstacle],
+        bounds,
+        detect_and_return_cylicity=True,
+    )
 
 
 def solve2(state):
-    mask = np.zeros_like(state, dtype=np.uint8)
-    mask[np.where(state == GUARD)] = VISITED
+    num_limit_cycles = 0
 
-    def find_limit_cycles_brute_force(state, mask):
-        num_limit_cycles = 0
+    pos = list(zip(*np.where(state == GUARD)))[0]
+    obstacles = list(zip(*np.where(state == OBSTACLE)))
+    bounds = state.shape
 
-        candidate_positions = step_until_leave(state)
-        candidate_positions[np.where(GUARD == state)] = False
-        list_of_candidate_positions = list(zip(*candidate_positions.nonzero()))
+    possible_obstacles = step_until_leave_or_cycle(
+        pos,
+        list(zip(*np.where(state == OBSTACLE))),
+        state.shape,
+    )
+    possible_obstacles.pop(pos)
 
-        with Pool(os.cpu_count()) as p:
-            num_limit_cycles = sum(
-                list(
-                    tqdm(
-                        p.imap(
-                            partial(
-                                step_until_leave_or_cycle_or_maxit,
-                                state=state,
-                                mask=mask,
-                                maxit=1e4,
-                            ),
-                            list_of_candidate_positions,
-                        ),
-                        total=len(list_of_candidate_positions),
-                    )
+    with Pool(os.cpu_count()) as p:
+        num_limit_cycles = sum(
+            list(
+                tqdm(
+                    p.imap(
+                        partial(add_extra_obstacle, pos, obstacles, bounds),
+                        possible_obstacles,
+                    ),
+                    total=len(possible_obstacles),
                 )
             )
+        )
 
-        return num_limit_cycles
-
-    return find_limit_cycles_brute_force(state, mask)
+    return num_limit_cycles
 
 
 if __name__ == "__main__":
@@ -191,4 +169,4 @@ if __name__ == "__main__":
                 np.genfromtxt("06_input.txt", comments=None, delimiter=1, dtype="<U19")
             )
         )
-    )  # 1655 (6 minutes on shitty old 8-core laptop)
+    )  # 1655 (~3min on shitty old 8-core laptop)
