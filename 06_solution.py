@@ -41,18 +41,18 @@ def _out_of_bounds(xmax, ymax, pos):
     return (pos[0] < 0) | (pos[0] >= xmax) | (pos[1] < 0) | (pos[1] >= ymax)
 
 
-def step_until_leave_or_cycle(pos, obstacles, bounds, detect_and_return_cylicity=False):
+def step_until_leave_or_cycle(pos, obstacles, bounds, return_cyclicity=False):
     out_of_bounds = partial(_out_of_bounds, *bounds)
 
     visited, num_rotations = {}, 0
     while (
         True
-    ):  # will run forever if `detect_and_return_cylicity=False` and configuration leads to cycles...
+    ):  # will run forever if `return_cyclicity=False` and configuration leads to cycles...
         new_pos = _move(pos, num_rotations)
         if out_of_bounds(new_pos):
             break
         if (
-            detect_and_return_cylicity
+            return_cyclicity
             and new_pos in visited
             and visited[new_pos] == num_rotations
         ):
@@ -62,7 +62,7 @@ def step_until_leave_or_cycle(pos, obstacles, bounds, detect_and_return_cylicity
         else:  # move ahead to new location
             pos = new_pos
             visited[pos] = num_rotations
-    return visited if not detect_and_return_cylicity else False
+    return visited if not return_cyclicity else False
 
 
 def solve(state):
@@ -83,7 +83,7 @@ def add_extra_obstacle(pos, obstacles, bounds, extra_obstacle):
         pos,
         obstacles + [extra_obstacle],
         bounds,
-        detect_and_return_cylicity=True,
+        return_cyclicity=True,
     )
 
 
