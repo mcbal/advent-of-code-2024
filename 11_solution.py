@@ -39,7 +39,7 @@ print(solve(data, blinks=25))  # 194782
 # Since we only care about the final number of stones the order of the stones actually *does
 # not matter* so we can use buckets labeled by numbers to store counts. This will avoid the
 # slowdown since all repeating elements will just be a count associated to a bucket with
-# that number. We will use a python dictionary to implement the hash map.
+# that number. We will use a defaultdict(int) to implement the hash map.
 
 
 def _apply_dict_rules(dict_repr):
@@ -57,10 +57,9 @@ def _apply_dict_rules(dict_repr):
         else:
             dict_repr[k] -= v
             dict_repr[2024 * k] += v
-    for k, v in dict_repr.copy().items():
         if (
-            v == 0
-        ):  # get rid of zero counts or else they will trigger rule #2 and start spreading
+            dict_repr[k] == 0
+        ):  # get rid of zero counts since these stones no longer interact
             del dict_repr[k]
     return dict_repr
 
