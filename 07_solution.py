@@ -14,7 +14,7 @@ def solve(equations, operators):
 
         for ops in product(*[operators] * (len(numbers) - 1)):
 
-            def _op_reduce(x, y):  # https://stackoverflow.com/a/70227259
+            def _op_reduce(x, y):  # trick from https://stackoverflow.com/a/70227259
                 return x(y) if callable(x) else partial(y, x)
 
             if target == (

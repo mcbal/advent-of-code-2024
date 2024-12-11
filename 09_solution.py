@@ -90,44 +90,43 @@ print(fs_checksum(real_disk_map))  # 6607511583593
 def fs_checksum_part_2(disk_map):
     list_repr = _map2repr(disk_map)  # (file_id_number, num_file_block, num_free_block)
 
-    for bwd_tuple in tqdm(deepcopy(list_repr)[::-1]):  # backward pass until end
-        for fwd_idx, fwd_tuple in enumerate(list_repr):  # forward pass until break
-            if bwd_tuple[1] <= fwd_tuple[2]:
-                # find bwd_tuple in list_repr by matching on (file_id_number, num_file_block)
-                # spacing (num_free_block) can have changed since we update list_repr in place
-                matching_fwd_bwd_tuple_idx, matching_fwd_bwd_tuple = next(
-                    (it, t)
-                    for (it, t) in enumerate(list_repr)
-                    if t[:2] == bwd_tuple[:2]
+    for source in tqdm(deepcopy(list_repr)[::-1]):  # backward pass until end
+        for dest_idx, dest in enumerate(list_repr):  # forward pass until break
+            if source[1] <= dest[2]:
+                # find source in list_repr by matching on (file_id_number, num_file_block) since
+                # spacing (num_free_block) can have changed as we update list_repr in place
+                matching_source_idx, matching_source = next(
+                    (it, t) for (it, t) in enumerate(list_repr) if t[:2] == source[:2]
                 )
-                # now check if free blocks of fwd_tuple is strictly to the left of bwd_tuple
-                if fwd_idx < matching_fwd_bwd_tuple_idx:
-                    # remove file that needs to be moved left
-                    list_repr.pop(matching_fwd_bwd_tuple_idx)
-                    # update file before removed file to absorb length and spacing
-                    prev = list_repr[matching_fwd_bwd_tuple_idx - 1]
-                    list_repr[matching_fwd_bwd_tuple_idx - 1] = (
-                        prev[0],
-                        prev[1],
-                        prev[2] + matching_fwd_bwd_tuple[1] + matching_fwd_bwd_tuple[2],
+                # now check if free blocks of dest is strictly to the left of matching source
+                if dest_idx < matching_source_idx:
+                    # remove source that needs to be moved left
+                    list_repr.pop(matching_source_idx)
+                    # update file before removed source file to absorb length and spacing
+                    list_repr[matching_source_idx - 1] = (
+                        list_repr[matching_source_idx - 1][0],
+                        list_repr[matching_source_idx - 1][1],
+                        list_repr[matching_source_idx - 1][2]
+                        + matching_source[1]
+                        + matching_source[2],
                     )
-                    # add removed file back to the left in correct position with correct spacing
+                    # add removed source file at target destination in correct position with correct spacing
                     spacing = (
-                        fwd_tuple[2] - matching_fwd_bwd_tuple[1]
-                        if (matching_fwd_bwd_tuple_idx - fwd_idx) > 1
-                        else fwd_tuple[2] + matching_fwd_bwd_tuple[2]
+                        dest[2] - matching_source[1]
+                        if (matching_source_idx - dest_idx) > 1
+                        else dest[2] + matching_source[2]
                     )  # this was tricky
                     list_repr.insert(
-                        fwd_idx + 1,
+                        dest_idx + 1,
                         (
-                            matching_fwd_bwd_tuple[0],
-                            matching_fwd_bwd_tuple[1],
+                            matching_source[0],
+                            matching_source[1],
                             spacing,
                         ),
                     )
-                    # remove spacing of target destination since tuple at
-                    # position (fwd_idx + 1) now contains the appropriate spacing
-                    list_repr[fwd_idx] = (fwd_tuple[0], fwd_tuple[1], 0)
+                    # remove spacing of target destination since moved file tuple at
+                    # position (dest_idx + 1) now contains the appropriate spacing
+                    list_repr[dest_idx] = (dest[0], dest[1], 0)
 
                 break  # an important break statement
 

@@ -36,10 +36,10 @@ print(solve(data, blinks=25))  # 194782
 
 # part 2 (address slowdown of update/insertion using list representation)
 
-# Since we only care about the final number of stones the order of the stones actually *does
-# not matter* so we can use buckets labeled by numbers to store counts. This will avoid the
+# since we only care about the final number of stones the order of the stones actually *does
+# not matter* so we can use buckets labeled by numbers to store counts. this will avoid the
 # slowdown since all repeating elements will just be a count associated to a bucket with
-# that number. We will use a defaultdict(int) to implement the hash map.
+# that number. we use a defaultdict(int) to implement the hash map.
 
 
 def _apply_dict_rules(dict_repr):
@@ -68,7 +68,7 @@ def solve2(str_repr: str, *, blinks: int):
     dict_repr = defaultdict(int, ((k, 1) for k in list(map(int, str_repr.split()))))
     for _ in range(blinks):
         dict_repr = _apply_dict_rules(dict_repr)
-    return sum((dict_repr).values())
+    return sum(dict_repr.values())
 
 
 assert solve2("0 1 10 99 999", blinks=1) == 7

@@ -55,7 +55,6 @@ test_data = (
     "............"
 )
 test_grid = np.genfromtxt(StringIO(test_data), delimiter=1, dtype="<U19")
-print(solve(test_grid))
 assert solve(test_grid) == 14
 
 real_grid = np.genfromtxt("08_input.txt", delimiter=1, dtype="<U19")
@@ -98,7 +97,6 @@ def solve2(grid):
     return len(antinodes)
 
 
-print(solve2(test_grid))
 assert solve2(test_grid) == 34
 
 print(solve2(real_grid))  # 944

@@ -148,7 +148,7 @@ if __name__ == "__main__":
                 np.genfromtxt("06_input.txt", comments=None, delimiter=1, dtype="<U19")
             )
         )
-    )
+    )  # 4883
 
     assert (
         solve2(
