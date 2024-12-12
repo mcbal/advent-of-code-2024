@@ -39,24 +39,21 @@ def _relabel_connected_components(
         mask = _grid_str == unique_label
         maybe_connected_coords = list(zip(*np.where(mask)))
 
-        initial_pos = maybe_connected_coords[0]
-        initial_test_grid = np.vectorize(lambda c: "@" if c == unique_label else c)(
-            _grid_str
-        )
-        test_grid = initial_test_grid.copy()
+        test_pos = maybe_connected_coords[0]
+        test_grid = np.vectorize(lambda c: "@" if c == unique_label else c)(_grid_str)
 
         while True:
             prev_test_grid = test_grid.copy()
-            _flood_fill(test_grid, initial_pos, unique_label)
+            _flood_fill(test_grid, test_pos, unique_label)
             if np.all(mask == (test_grid == unique_label)):
                 cc[str(unique_label)].append(np.where(test_grid != prev_test_grid))
                 break
             else:
                 cc[str(unique_label)].append(np.where(test_grid != prev_test_grid))
-                initial_pos = next(
-                    pos
-                    for pos in maybe_connected_coords
-                    if pos in list(zip(*np.where(test_grid == "@")))
+                test_pos = next(
+                    _pos
+                    for _pos in maybe_connected_coords
+                    if _pos in list(zip(*np.where(test_grid == "@")))
                 )
     for k, v in cc.items():
         for i, vv in enumerate(v):
