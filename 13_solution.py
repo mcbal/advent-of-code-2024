@@ -10,7 +10,7 @@ np.set_printoptions(suppress=True, formatter={"float_kind": "{:f}".format})
 
 
 def parse(data, y_shift=0):
-    ols_problems = []
+    linear_problems = []
     for lines in batched(data.split("\n"), 4):
         X = np.zeros((2, 2))
         X[0, 0] = float(re.search(r"X\+(.*?),", lines[0]).group(1))
@@ -23,15 +23,15 @@ def parse(data, y_shift=0):
                 float(re.search(r"Y\=(.*?)$", lines[2]).group(1)),
             ]
         )
-        ols_problems.append((X.astype(np.float64), (y + y_shift).astype(np.float64)))
-    return ols_problems
+        linear_problems.append((X.astype(np.float64), (y + y_shift).astype(np.float64)))
+    return linear_problems
 
 
 def solve(data, y_shift=0, atol=1e-4, check_matrices=False):
-    ols = parse(data, y_shift=y_shift)
+    linear_problems = parse(data, y_shift=y_shift)
 
     min_tokens = []
-    for X, y in ols:
+    for X, y in linear_problems:
         if check_matrices:
             print(
                 f"rank: {np.linalg.matrix_rank(X)} :: condition number: {np.linalg.cond(X)}"
