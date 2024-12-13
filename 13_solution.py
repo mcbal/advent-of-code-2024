@@ -27,7 +27,7 @@ def parse(data, y_shift=0):
     return ols_problems
 
 
-def solve(data, y_shift=0, atol=1e-3, check_matrices=False):
+def solve(data, y_shift=0, atol=1e-4, check_matrices=False):
     ols = parse(data, y_shift=y_shift)
 
     min_tokens = []
