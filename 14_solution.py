@@ -78,14 +78,14 @@ print(solve(real_data, num_cols=101, num_rows=103, num_iter=100))  # 229421808
 # modulo edge wrapping means rows/cols repeat every `num_rows`/`num_cols` iterations
 # so we can take big summed steps to iterate over distinct configurations, e.g.,
 # after i*num_rows iterations, row coords will be identical to those of initial state
-# but col coords will be offset from initial state col coords by an integer m in [0, num_cols[.
+# but col coords will be offset from initial state col coords by an integer m.
 # if we continue to iterate for j*num_cols iterations, we wil stay in the same offset
-# col coords (because of modulo in cols direction) but the row coords s will now be
-# offset by n in [0, num_rows[ from the row coords in the initial state. so we are
-# effectively looping over offset combinations (m, n)
+# col coords (because of modulo in cols direction) but the row coords s will now end up
+# being offset by n from the row coords in the initial state. so we loop effectively
+# over offset combinations (m, n) to find the xmas tree configuration
 
 
-def solve2(data, *, num_cols, num_rows):
+def solve2(data, *, num_cols, num_rows, num_cols_iter, num_rows_iter):
 
     def _entropy(labels, base=None):
         value, counts = np.unique(labels, return_counts=True)
@@ -94,7 +94,8 @@ def solve2(data, *, num_cols, num_rows):
     min_entropy_state = ((0, 0), np.inf)
     for r, c in (
         pbar := tqdm(
-            product(range(num_rows), range(num_cols)), total=num_rows * num_cols
+            product(range(num_rows_iter), range(num_cols_iter)),
+            total=num_rows_iter * num_cols_iter,
         )
     ):
         positions = solve(
@@ -146,4 +147,12 @@ def solve2(data, *, num_cols, num_rows):
     return min_entropy_num_iter
 
 
-print(solve2(real_data, num_cols=101, num_rows=103))  # 6577
+# print(
+#     solve2(real_data, num_cols=101, num_rows=103, num_cols_iter=100, num_rows_iter=100)
+# )  # 6577 still lowest entropy value
+
+print(
+    solve2(
+        real_data, num_cols=101, num_rows=103, num_cols_iter=60, num_rows_iter=7
+    )  # lower num_cols_iter and num_rows_iter steps (420) found empirically to stop earlier
+)  # 6577
