@@ -7,7 +7,7 @@ from tqdm import tqdm
 # part 1
 
 
-def parse(data, y_shift=0):
+def parse(data):
     positions, velocities = [], []
     for line in data.split("\n"):
         if line != "":
@@ -43,6 +43,7 @@ def solve(data, *, num_cols, num_rows, num_iter, return_positions=False):
         return q1 * q2 * q3 * q4
 
     positions = _wrap_edges(state["positions"] + num_iter * state["velocities"])
+
     if return_positions:
         return positions
 
@@ -75,14 +76,14 @@ print(solve(real_data, num_cols=101, num_rows=103, num_iter=100))  # 229421808
 # part 2
 
 
-# modulo edge wrapping means rows/cols repeat every `num_rows`/`num_cols` iterations
-# so we can take big summed steps to iterate over distinct configurations, e.g.,
-# after i*num_rows iterations, row coords will be identical to those of initial state
-# but col coords will be offset from initial state col coords by an integer m.
+# modulo edge wrapping means rows/cols coords repeat every `num_rows`/`num_cols` iterations
+# so we can take big summed steps to iterate over distinct configurations, e.g., after
+# i*num_rows iterations, row coords will be identical to those of initial state but
+# col coords will be offset from initial state col coords by an integer step m.
 # if we continue to iterate for j*num_cols iterations, we wil stay in the same offset
-# col coords (because of modulo in cols direction) but the row coords s will now end up
-# being offset by n from the row coords in the initial state. so we loop effectively
-# over offset combinations (m, n) to find the xmas tree configuration
+# col coords (because of modulo in cols direction) but the row coords will now end up
+# being offset by step n from the row coords in the initial state. so we effectively loop
+# over offset combinations (m, n) to find the xmas tree configuration.
 
 
 def solve2(data, *, num_cols, num_rows, num_cols_iter, num_rows_iter):
@@ -154,5 +155,5 @@ def solve2(data, *, num_cols, num_rows, num_cols_iter, num_rows_iter):
 print(
     solve2(
         real_data, num_cols=101, num_rows=103, num_cols_iter=60, num_rows_iter=7
-    )  # lower num_cols_iter and num_rows_iter steps (420) found empirically to stop earlier
+    )  # lower num_cols_iter and num_rows_iter steps determined empirically to stop early
 )  # 6577
