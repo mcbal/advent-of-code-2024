@@ -75,9 +75,17 @@ print(solve(real_data, num_cols=101, num_rows=103, num_iter=100))  # 229421808
 # part 2
 
 
-# modulo rows repeat every 103 iterations and cols every 101 iterations
-# so we can take big steps to iterate over distinct configurations
-def solve2(data, *, num_cols, num_rows, num_iter):
+# modulo edge wrapping means rows/cols repeat every `num_rows`/`num_cols` iterations
+# so we can take big summed steps to iterate over distinct configurations, e.g.,
+# after i*num_rows iterations, row coords will be identical to those of initial state
+# but col coords will be offset from initial state col coords by an integer m in [0, num_cols[.
+# if we continue to iterate for j*num_cols iterations, we wil stay in the same offset
+# col coords (because of modulo in cols direction) but the row coords s will now be
+# offset by n in [0, num_rows[ from the row coords in the initial state. so we are
+# effectively looping over offset combinations (m, n)
+
+
+def solve2(data, *, num_cols, num_rows):
 
     def _entropy(labels, base=None):
         value, counts = np.unique(labels, return_counts=True)
@@ -85,7 +93,9 @@ def solve2(data, *, num_cols, num_rows, num_iter):
 
     min_entropy_state = ((0, 0), np.inf)
     for r, c in (
-        pbar := tqdm(product(range(num_iter), range(num_iter)), total=num_iter**2)
+        pbar := tqdm(
+            product(range(num_rows), range(num_cols)), total=num_rows * num_cols
+        )
     ):
         positions = solve(
             real_data,
@@ -98,17 +108,18 @@ def solve2(data, *, num_cols, num_rows, num_iter):
         grid[positions[0], positions[1]] = 1
         hist_cols, hist_rows = grid.sum(axis=0), grid.sum(axis=1)
 
-        # use sum of entropies of masks of bigger than mean entries for histograms
-        # we expect structure for the xmas tree state, so significantly reduced entropy
-        summed_collapsed_entropy = float(
+        # we use sum of entropies of masks of bigger than mean entries for histograms
+        # since we expect clustering structure for the xmas tree state, so lower entropy
+
+        summed_hist_entropy = float(
             _entropy((hist_cols > hist_cols.mean()).flatten(), base=2)
             + _entropy((hist_rows > hist_rows.mean()).flatten(), base=2)
         )
 
-        if summed_collapsed_entropy < min_entropy_state[1]:
-            min_entropy_state = ((r, c), summed_collapsed_entropy)
+        if summed_hist_entropy < min_entropy_state[1]:
+            min_entropy_state = ((r, c), summed_hist_entropy)
             pbar.set_description(
-                f"min_entropy {summed_collapsed_entropy} found @ iteration {r} {c} ({r * num_rows + c * num_cols})"
+                f"min_entropy {summed_hist_entropy} found @ iteration {r} {c} ({r * num_rows + c * num_cols})"
             )
 
     min_entropy_num_iter = (
@@ -121,6 +132,7 @@ def solve2(data, *, num_cols, num_rows, num_iter):
         num_iter=min_entropy_num_iter,
         return_positions=True,
     )
+
     grid = np.zeros((num_rows, num_cols))
     grid[positions[0], positions[1]] = 1
     viz_grid = np.array2string(
@@ -134,4 +146,4 @@ def solve2(data, *, num_cols, num_rows, num_iter):
     return min_entropy_num_iter
 
 
-print(solve2(real_data, num_cols=101, num_rows=103, num_iter=60))  # 6577
+print(solve2(real_data, num_cols=101, num_rows=103))  # 6577
