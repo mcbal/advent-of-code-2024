@@ -77,33 +77,27 @@ print(solve(real_data, num_cols=101, num_rows=103, num_iter=100))  # 229421808
 
 
 # modulo edge wrapping means rows/cols coords repeat every `num_rows`/`num_cols` iterations
-# so we can take big summed steps to iterate over distinct configurations, e.g., after
-# i*num_rows iterations, row coords will be identical to those of initial state but
-# col coords will be offset from initial state col coords by an integer step m.
-# if we continue to iterate for j*num_cols iterations, we wil stay in the same offset
-# col coords (because of modulo in cols direction) but the row coords will now end up
-# being offset by step n from the row coords in the initial state. so we effectively loop
-# over offset combinations (m, n) to find the xmas tree configuration.
+# so there are actually only "least common multiple" number of distinct configurations.
+# also, `num_rows`/`num_cols` are both prime numbers in this puzzle, so the least common
+# multiple is the product of the two numbers. that means there are only 103*101=10403 unique
+# configurations to look for the xmas tree, where the rows/cols coords align to form a pattern.
+# we can detect this pattern in many ways but go for low entropy of row/col-projected counts
+# because we expect the xmas tree to stand out from the higher-entropy noise patterns.
 
 
-def solve2(data, *, num_cols, num_rows, num_cols_iter, num_rows_iter):
+def solve2(data, *, num_cols, num_rows, num_iter):
 
     def _entropy(labels, base=None):
         value, counts = np.unique(labels, return_counts=True)
         return stats.entropy(counts, base=base)
 
     min_entropy_state = ((0, 0), np.inf)
-    for r, c in (
-        pbar := tqdm(
-            product(range(num_rows_iter), range(num_cols_iter)),
-            total=num_rows_iter * num_cols_iter,
-        )
-    ):
+    for i in (pbar := tqdm(range(num_iter))):
         positions = solve(
             real_data,
             num_cols=num_cols,
             num_rows=num_rows,
-            num_iter=r * num_rows + c * num_cols,
+            num_iter=i,
             return_positions=True,
         )
         grid = np.zeros((num_rows, num_cols))
@@ -119,14 +113,12 @@ def solve2(data, *, num_cols, num_rows, num_cols_iter, num_rows_iter):
         )
 
         if summed_hist_entropy < min_entropy_state[1]:
-            min_entropy_state = ((r, c), summed_hist_entropy)
+            min_entropy_state = (i, summed_hist_entropy)
             pbar.set_description(
-                f"min_entropy {summed_hist_entropy} found @ iteration {r} {c} ({r * num_rows + c * num_cols})"
+                f"min_entropy {summed_hist_entropy} found @ iteration {i})"
             )
 
-    min_entropy_num_iter = (
-        min_entropy_state[0][0] * num_rows + min_entropy_state[0][1] * num_cols
-    )
+    min_entropy_num_iter = min_entropy_state[0]
     positions = solve(
         real_data,
         num_cols=num_cols,
@@ -148,12 +140,4 @@ def solve2(data, *, num_cols, num_rows, num_cols_iter, num_rows_iter):
     return min_entropy_num_iter
 
 
-# print(
-#     solve2(real_data, num_cols=101, num_rows=103, num_cols_iter=100, num_rows_iter=100)
-# )  # 6577 still lowest entropy value
-
-print(
-    solve2(
-        real_data, num_cols=101, num_rows=103, num_cols_iter=60, num_rows_iter=7
-    )  # lower num_cols_iter and num_rows_iter steps determined empirically to stop early
-)  # 6577
+print(solve2(real_data, num_cols=101, num_rows=103, num_iter=101 * 103))  # 6577
